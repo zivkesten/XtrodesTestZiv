@@ -1,10 +1,10 @@
-package com.zivkesten.xtrodestest.di
+package com.zivkesten.xtrodestestziv.di
 
-import com.zivkesten.xtrodestest.data.api.GetApiService
-import com.zivkesten.xtrodestest.data.repository.RemoteRepository
+import android.content.Context
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 
 @Module
@@ -12,7 +12,7 @@ import dagger.hilt.components.SingletonComponent
 object AppModule {
 
     @Provides
-    fun provideBlogRepository(apiService: GetApiService): RemoteRepository {
-        return RemoteRepository(apiService)
+    fun provideResourceProvider(@ApplicationContext context: Context): ResourceProvider {
+        return ResourceProvider(context)
     }
 }

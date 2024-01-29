@@ -1,38 +1,34 @@
-package com.zivkesten.xtrodestest.presentation
+package com.zivkesten.xtrodestestziv.presentation
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
-import com.zivkesten.xtrodestest.data.repository.RemoteRepository
+import androidx.lifecycle.viewModelScope
+import com.zivkesten.xtrodestestziv.di.ResourceProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.io.BufferedReader
-import java.io.File
-import java.io.FileReader
-import java.io.IOException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val repository: RemoteRepository
+    private val resourceProvider: ResourceProvider
+
 ) : ViewModel() {
 
-    var c = ""
-
-    fun readFile(filePath: String) {
-        val file: File = File(filePath) // filePath is the path to your file
-
-        val text = StringBuilder()
-
-        try {
-            val br = BufferedReader(FileReader(file))
-            var line: String?
-            while (br.readLine().also { line = it } != null) {
-                text.append(line)
-                text.append('\n')
+    fun readFile(resourceName: String) {
+        viewModelScope.launch {
+            val fileContents = withContext(Dispatchers.IO) {
+                readFromRaw(resourceName)
             }
-            br.close()
-        } catch (e: IOException) {
-            // Handle exceptions
+            Log.d("Zivi", "fileContents $fileContents")
+            // Update LiveData or handle file contents as needed
         }
+    }
 
+    private fun readFromRaw(resourceName: String): String {
+        val resourceId = resourceProvider.getContext().resources.getIdentifier(resourceName, "raw", resourceProvider.getContext().packageName)
+        return resourceProvider.getContext().resources.openRawResource(resourceId).bufferedReader().use { it.readText() }
     }
 }
