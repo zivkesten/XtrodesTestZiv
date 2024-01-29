@@ -1,6 +1,6 @@
 package com.zivkesten.xtrodestestziv
 
-data class Packet(
+data class Record(
+    val type: Int,
     val bytes: List<Int>,
-    val numberOfRecords: Int
 )

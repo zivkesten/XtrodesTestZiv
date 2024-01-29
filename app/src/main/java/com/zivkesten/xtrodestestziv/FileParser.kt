@@ -6,7 +6,9 @@ import java.io.InputStream
 
 class FileParser {
 
-    var packets: MutableList<Packet> = mutableListOf<Packet>()
+    var a0Records: List<Record> = mutableListOf<Record>()
+
+    var first = true
 
     companion object {
         const val PACKET_START = 13
@@ -14,58 +16,48 @@ class FileParser {
     }
 
     @Throws(IOException::class)
-    fun findAndParsePackets(inputStream: InputStream): List<Packet> {
-        var currentPacket = mutableListOf<Int>()
-        var lengthOfPacket = 0
+    fun findAndParsePackets(inputStream: InputStream): List<Record> {
+        val records = mutableListOf<Record>()
+        val currentRecord = mutableListOf<Int>()
         var currentByte = inputStream.read()
+        var packetType = -1
+        var packetLength = 0
 
         while (currentByte != -1) {
             if (currentByte == PACKET_START) {
-                if (currentPacket.isNotEmpty()) {
-                    // Handle the case where PACKET_END wasn't found before the next PACKET_START
-                    val numberOfRecords = extractNumberOfRecords(currentPacket, lengthOfPacket)
-                    packets.add(Packet(currentPacket, numberOfRecords))
-                    currentPacket = mutableListOf()
+                currentRecord.clear()
+                packetType = -1
+                packetLength = 0
+            }
+
+            currentRecord.add(currentByte)
+
+            if (currentRecord.size == 2) {
+                packetType = currentRecord[1]
+                if (first) Log.d("Zivi", "packetType $packetType")
+            } else if (currentRecord.size == 10) {
+                val ninthByte = currentRecord[8]
+                val tenthByte = currentRecord[9]
+                packetLength = tenthByte * 256 + ninthByte
+                if (first) Log.d("Zivi", "packetLength $packetLength")
+            }
+
+            if (currentRecord.size >= 10 + packetLength && currentRecord[currentRecord.size - 3] == 0x00) {
+                if (currentRecord.last() == PACKET_END) {
+                    if (first) Log.d("Zivi", "PACKET_END $packetLength")
+
+                    records.add(Record(packetType, currentRecord.toList())) // '0' for numberOfRecords if it's still required
+                    currentRecord.clear()
                 }
             }
 
-            currentPacket.add(currentByte)
-
-            if (currentByte == PACKET_END) {
-                val numberOfRecords = extractNumberOfRecords(currentPacket, lengthOfPacket)
-                packets.add(Packet(currentPacket, numberOfRecords))
-                currentPacket = mutableListOf()
-            } else if (currentPacket.size % 6 == 0) {
-                //lengthOfPacket = determinePacketLength(inputStream)
-            }
-
             currentByte = inputStream.read()
+            first = false
         }
-
-        // Handle any remaining bytes in the buffer
-        if (currentPacket.isNotEmpty()) {
-            val numberOfRecords = extractNumberOfRecords(currentPacket, lengthOfPacket)
-            packets.add(Packet(currentPacket, numberOfRecords))
+       // Log.d("Zivi", "packets $packets")
+        a0Records = a0Records.toMutableList().also { aoRecords ->
+            aoRecords.addAll(records.filter { it.type != 160 })
         }
-
-        Log.d("Zivi", "Total packets: ${packets.size}")
-        return packets
-    }
-
-    private fun extractNumberOfRecords(packet: List<Int>, lengthOfPacket: Int): Int {
-        val index = 6 + lengthOfPacket + 2 // 6 initial bytes, length of packet, 2 bytes offset
-        return if (index < packet.size) packet[index] else -1
-    }
-
-    private fun determinePacketLength(inputStream: InputStream): Int {
-        Log.d("Zivi", "determinePacketLength")
-        val lengthByte1 = inputStream.read()
-        var length = lengthByte1
-        if (lengthByte1 >= 256) {
-            val lengthByte2 = inputStream.read()
-            length = lengthByte1 + lengthByte2 * 256
-        }
-        Log.d("Zivi", "length $length")
-        return length
+        return a0Records
     }
 }
