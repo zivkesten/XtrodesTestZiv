@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zivkesten.xtrodestestziv.FileParser
 import com.zivkesten.xtrodestestziv.di.ResourceProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -25,11 +26,20 @@ class MainViewModel @Inject constructor(
 
     var contents = mutableStateOf("WELCOM")
 
+    val fileParser = FileParser()
+
     var job: Job? = null
 
     var theFirstByte: Int = -1
     var sequenceNumber: Int = -1
-    private var messageTypeReport: Int = -1
+    var messageTypeReport: Int = -1
+    var flagsMultiPacket: Int = -1
+    var lengthOfPacket: Int = -1
+    var commandStream: Int = -1
+    var lengthOfPayload: Int = -1
+    var numberOfRecordes: Int = -1
+    var recoredType: Int = -1
+
     init {
         Log.d("Zivi", "init")
 
@@ -53,36 +63,17 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun readFromRawByteByByte(resourceName: String) {
-        Log.d("Zivi", "readFromRawByteByByte")
-        val resourceId = resourceProvider.getResourceId(resourceName)
-        val inputStream = resourceProvider.getResourceInputStream(resourceId)
-        Log.d("Zivi", "resourceId $resourceId")
-
-        Log.d("Zivi", "inputStream ${inputStream.read()}")
         try {
+            val resourceId = resourceProvider.getResourceId(resourceName)
+            val inputStream = resourceProvider.getResourceInputStream(resourceId)
+            fileParser.findAndParsePackets(inputStream) // return the contents for UI processing
 
+//            Log.d("Zivi", "First byte: ${fileParser.theFirstByte}")
+//            Log.d("Zivi", "Sequence number: ${fileParser.sequenceNumber}")
+//            Log.d("Zivi", "Message type report: ${fileParser.messageTypeReport}")
 
-            inputStream.use { stream ->
-                val firstByte = stream.read()
-                if (firstByte != -1) {
-                    theFirstByte = firstByte
-                }
-                val secondByte = stream.read()
-                if (secondByte != -1) {
-                    sequenceNumber = secondByte
-                }
-
-                val third = stream.read()
-                if (third != -1) {
-                    messageTypeReport = third
-                }
-            }
-            Log.d("Zivi", "First byte: $theFirstByte")
-            Log.d("Zivi", "sequenceNumber: $sequenceNumber")
-            Log.d("Zivi", "messageTypeReport: $messageTypeReport")
-
-        } catch (Ex: IOException) {
-            Log.e("Zivi", "error ${Ex.message}")
+        } catch (ex: IOException) {
+            Log.e("Zivi", "Error: ${ex.message}")
         }
     }
 }
